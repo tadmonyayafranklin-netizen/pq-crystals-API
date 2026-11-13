@@ -1,0 +1,239 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Kyber KEM Platform</title>
+<link rel="stylesheet" href="styles.css">
+</head>
+<body>
+<header>
+  <div class="brand">
+    <h1>Kyber KEM Platform</h1>
+    <span class="sub">Post-quantum key encapsulation &middot; ref + avx2 &middot; Kyber512/768/1024</span>
+  </div>
+  <div class="header-right">
+    <a class="docs-link" href="/docs" target="_blank" rel="noopener">API docs &nearr;</a>
+    <span class="health" id="health">checking&hellip;</span>
+  </div>
+</header>
+
+<nav class="tabs">
+  <button class="tab active" data-tab="keys">Keypairs</button>
+  <button class="tab" data-tab="exchange">Key Exchange</button>
+  <button class="tab" data-tab="channel">Secure Channel</button>
+  <button class="tab" data-tab="explorer">API Explorer</button>
+</nav>
+
+<main>
+  <!-- ============ KEYPAIRS ============ -->
+  <section id="tab-keys" class="tabpane active">
+    <div class="grid cols-2">
+      <div class="card">
+        <h2>Parameters</h2>
+        <label for="impl">Implementation</label>
+        <select id="impl">
+          <option value="ref">ref (portable)</option>
+          <option value="avx2">avx2 (optimized)</option>
+        </select>
+        <label for="alg">Algorithm</label>
+        <select id="alg">
+          <option value="512">Kyber512</option>
+          <option value="768" selected>Kyber768</option>
+          <option value="1024">Kyber1024</option>
+        </select>
+        <div id="sizes" class="hint-block"></div>
+        <label for="profileName">Profile name</label>
+        <input type="text" id="profileName" placeholder="e.g. alice" spellcheck="false">
+        <button id="genBtn" class="primary">Generate keypair</button>
+        <div class="err" id="genErr"></div>
+        <div class="row-btns">
+          <button class="secondary small" id="importBtn">Import keypair&hellip;</button>
+          <input type="file" id="importFile" accept=".json,.txt" hidden>
+        </div>
+        <div class="err" id="importErr"></div>
+      </div>
+
+      <div class="card">
+        <h2>Saved profiles <span class="hint">(stored in this browser only)</span></h2>
+        <div id="profileList" class="profile-list"></div>
+        <div id="profileDetail" style="display:none">
+          <div class="kv"><span class="lbl">Implementation</span><span id="pdImpl"></span></div>
+          <div class="kv"><span class="lbl">Algorithm</span><span id="pdAlg"></span></div>
+          <div class="kv"><span class="lbl">Public key</span>
+            <button class="secondary small" data-copy="pdPk">copy</button>
+            <button class="secondary small" data-dl="pk">.bin</button>
+            <button class="secondary small" id="pdUseEnc">use in exchange &rarr;</button>
+          </div>
+          <div class="hex" id="pdPkHex"></div>
+          <div class="kv" style="margin-top:10px"><span class="lbl">Secret key</span>
+            <button class="secondary small" data-copy="pdSk">copy</button>
+            <button class="secondary small" data-dl="sk">.bin</button>
+            <button class="secondary small danger" id="pdDelete">delete</button>
+          </div>
+          <div class="hex" id="pdSkHex"></div>
+          <button class="secondary small" id="pdExport" style="margin-top:10px">Export as JSON</button>
+        </div>
+        <div id="profileEmpty" class="hint-block">No profiles yet. Generate or import a keypair to begin.</div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============ KEY EXCHANGE ============ -->
+  <section id="tab-exchange" class="tabpane">
+    <div class="grid cols-2">
+      <div class="card">
+        <h2>1 &middot; Encapsulate (sender side)</h2>
+        <p class="hint">Encrypt a shared secret to a recipient's public key. Produces a ciphertext to send and a shared secret only you can see.</p>
+        <label for="encImpl">Implementation</label>
+        <select id="encImpl"><option value="ref">ref</option><option value="avx2">avx2</option></select>
+        <label for="encAlg">Algorithm</label>
+        <select id="encAlg">
+          <option value="512">Kyber512</option>
+          <option value="768" selected>Kyber768</option>
+          <option value="1024">Kyber1024</option>
+        </select>
+        <label for="encPk">Recipient public key (hex)</label>
+        <textarea id="encPk" spellcheck="false" placeholder="paste hex public key…"></textarea>
+        <div class="row-btns">
+          <button class="primary" id="encBtn">Encapsulate</button>
+          <button class="secondary small" id="encFromProfile">use selected profile's pk</button>
+        </div>
+        <div class="err" id="encErr"></div>
+        <div class="out" id="encOut" style="display:none">
+          <div class="kv"><span class="lbl">Ciphertext</span>
+            <button class="secondary small" data-copy="ct">copy</button>
+            <button class="secondary small" id="sendCtToDec">send to decapsulation &darr;</button></div>
+          <div class="hex" id="ctHex"></div>
+          <div class="kv" style="margin-top:10px"><span class="lbl">Shared secret</span>
+            <button class="secondary small" data-copy="ssEnc">copy</button></div>
+          <div class="hex" id="ssEncHex"></div>
+          <button class="primary" id="keepSs" style="margin-top:10px">Keep shared secret for Secure Channel</button>
+        </div>
+      </div>
+
+      <div class="card">
+        <h2>2 &middot; Decapsulate (recipient side)</h2>
+        <p class="hint">Recover the shared secret using your secret key and the received ciphertext.</p>
+        <label for="decImpl">Implementation</label>
+        <select id="decImpl"><option value="ref">ref</option><option value="avx2">avx2</option></select>
+        <label for="decAlg">Algorithm</label>
+        <select id="decAlg">
+          <option value="512">Kyber512</option>
+          <option value="768" selected>Kyber768</option>
+          <option value="1024">Kyber1024</option>
+        </select>
+        <label for="decCt">Ciphertext (hex)</label>
+        <textarea id="decCt" spellcheck="false" placeholder="paste hex ciphertext…"></textarea>
+        <label for="decSk">Secret key (hex)</label>
+        <textarea id="decSk" spellcheck="false" placeholder="paste hex secret key…"></textarea>
+        <div class="row-btns">
+          <button class="primary" id="decBtn">Decapsulate</button>
+          <button class="secondary small" id="decFromProfile">use selected profile</button>
+        </div>
+        <div class="err" id="decErr"></div>
+        <div class="out" id="decOut" style="display:none">
+          <div class="kv"><span class="lbl">Shared secret</span>
+            <button class="secondary small" data-copy="ssDec">copy</button></div>
+          <div class="hex" id="ssDecHex"></div>
+          <div id="verdict" style="margin-top:10px;font-size:13px"></div>
+          <button class="primary" id="keepSsDec" style="margin-top:10px">Keep shared secret for Secure Channel</button>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============ SECURE CHANNEL ============ -->
+  <section id="tab-channel" class="tabpane">
+    <div class="grid cols-2">
+      <div class="card">
+        <h2>Session</h2>
+        <p class="hint">A shared secret from the Key Exchange tab is expanded into an AES-256-GCM key (HKDF-SHA256) using the Web Crypto API — entirely in your browser.</p>
+        <div id="chanStatus" class="hint-block">No shared secret yet. Complete a key exchange and click "Keep shared secret".</div>
+        <div id="chanInfo" style="display:none">
+          <div class="kv"><span class="lbl">Algorithm</span><span id="chanAlg"></span></div>
+          <div class="kv"><span class="lbl">Key fingerprint</span><span id="chanFp" class="mono"></span></div>
+          <button class="secondary small" id="chanClear">clear session</button>
+        </div>
+        <label for="chanRole">I am</label>
+        <select id="chanRole">
+          <option value="sender">Sender (encrypt)</option>
+          <option value="recipient">Recipient (decrypt)</option>
+        </select>
+      </div>
+
+      <div class="card">
+        <h2 id="chanOpTitle">Encrypt message</h2>
+        <label for="chanMsg" id="chanMsgLabel">Message (UTF-8)</label>
+        <textarea id="chanMsg" rows="4" spellcheck="false" placeholder="type a secret message…"></textarea>
+        <div class="row-btns">
+          <button class="primary" id="chanGo">Encrypt &amp; send</button>
+          <button class="secondary small" data-copy="chanOut">copy output</button>
+        </div>
+        <div class="err" id="chanErr"></div>
+        <div class="out" id="chanOutWrap" style="display:none">
+          <div class="kv"><span class="lbl" id="chanOutLbl">Ciphertext (base64)</span></div>
+          <div class="hex" id="chanOut"></div>
+        </div>
+        <div id="chanDecWrap" style="display:none;margin-top:16px">
+          <label for="chanBlob">Paste ciphertext to decrypt (base64)</label>
+          <textarea id="chanBlob" rows="3" spellcheck="false"></textarea>
+          <button class="primary" id="chanDecGo">Decrypt</button>
+          <div class="out" id="chanPlainWrap" style="display:none;margin-top:10px">
+            <div class="kv"><span class="lbl">Decrypted message</span></div>
+            <div class="hex" id="chanPlain"></div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============ API EXPLORER ============ -->
+  <section id="tab-explorer" class="tabpane">
+    <div class="card">
+      <h2>Request</h2>
+      <div class="grid cols-4" style="gap:12px">
+        <div>
+          <label for="exMethod">Method</label>
+          <select id="exMethod">
+            <option>POST</option><option>GET</option>
+          </select>
+        </div>
+        <div style="grid-column: span 2">
+          <label for="exPath">Path</label>
+          <select id="exPath"></select>
+        </div>
+        <div>
+          <label for="exImpl">Implementation</label>
+          <select id="exImpl"><option value="ref">ref</option><option value="avx2">avx2</option></select>
+        </div>
+        <div>
+          <label for="exAlg">Algorithm</label>
+          <select id="exAlg">
+            <option value="512">512</option><option value="768" selected>768</option><option value="1024">1024</option>
+          </select>
+        </div>
+      </div>
+      <label for="exBody">JSON body</label>
+      <textarea id="exBody" rows="6" spellcheck="false" placeholder='{"public_key": "…"}'></textarea>
+      <div class="row-btns">
+        <button class="primary" id="exSend">Send request</button>
+        <button class="secondary small" id="exCurl">show curl</button>
+      </div>
+      <div class="err" id="exErr"></div>
+    </div>
+    <div class="card" style="margin-top:16px">
+      <h2>Response</h2>
+      <pre class="resp" id="exResp">—</pre>
+    </div>
+  </section>
+</main>
+
+<footer>
+  Stateless API — the server stores nothing. Profiles and session keys live only in this browser's local storage / memory.
+  The Secure Channel demo derives an AES-256-GCM key from the Kyber shared secret via HKDF-SHA256 (Web Crypto).
+</footer>
+
+<script src="app.js"></script>
+</body>
+</html>
