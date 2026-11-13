@@ -140,4 +140,3 @@ curl -X POST http://localhost:8000/api/v1/ref/512/decapsulate \
 - `static/index.html`, `static/styles.css`, `static/app.js` — web platform frontend
 - `librandombytes.so` — compiled `randombytes` shim (build artifact)
 - `requirements.txt` — Python dependencies
-# pq-crystals-API
