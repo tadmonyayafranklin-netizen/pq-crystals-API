@@ -1,0 +1,4 @@
+{
+  "$schema": "https://openapi.vercel.sh/vercel.json",
+  "buildCommand": "make -C ref shared && make -C avx2 shared CFLAGS='-O3 -mavx2 -mbmi2 -mpopcnt -fomit-frame-pointer -z noexecstack' && cc -shared -fPIC -O2 -Iref ref/randombytes.c -o api/librandombytes.so && mkdir -p public && echo ok > public/vercel-keep.txt"
+}
